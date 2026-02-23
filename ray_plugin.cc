@@ -286,40 +286,65 @@ void RayPlugin::initSensor(const mjModel *m, mjData *d, int instance,
       break;
     }
   }
+
+  /* lossangle */
+  auto lossangle =
+      ReadVector<int>(mj_getPluginConfig(m, instance, base_attributes[12]));
+  if (!lossangle.empty()) {
+    ray_caster->set_lossangle(lossangle[0]);
+  }
+
+  /* min_energy */
+  auto min_energy =
+      ReadVector<int>(mj_getPluginConfig(m, instance, base_attributes[14]));
+  if (!min_energy.empty()) {
+    ray_caster->set_min_energy(min_energy[0]);
+  }
+
   /*  --------------  noise ----------- */
   auto noise =
       ReadStringVector(mj_getPluginConfig(m, instance, base_attributes[5]));
   auto noise_cfg =
       ReadVector<mjtNum>(mj_getPluginConfig(m, instance, base_attributes[6]));
   if (!noise.empty() && !noise_cfg.empty()) {
-    int seed = 0;
+    unsigned int seed = 0;
+    int noise_type = 0;
     for (int i = 0; i < noise_attributes.size(); i++) {
       if (noise[0].find(noise_attributes[i].first) != std::string::npos) {
         if (noise_cfg.size() < noise_attributes[i].second - 1)
           mju_error("RayPlugin: noise_cfg error: %s",
                     mj_getPluginConfig(m, instance, base_attributes[6]));
-        else if (noise_cfg.size() == noise_attributes[i].second)
+        else if (noise_cfg.size() == noise_attributes[i].second) {
           seed = noise_cfg[noise_attributes[i].second - 1];
-        switch (i) {
-        case 0: {
-          ray_caster->setNoise(
-              ray_noise::UniformNoise(noise_cfg[0], noise_cfg[1], seed));
-        } break;
-        case 1: {
-          ray_caster->setNoise(
-              ray_noise::GaussianNoise(noise_cfg[0], noise_cfg[1], seed));
-        } break;
-        case 2: {
-          ray_caster->setNoise(ray_noise::RayNoise1(noise_cfg[0], noise_cfg[1],
-                                                    noise_cfg[2], seed));
-        } break;
-        case 3: {
-          ray_caster->setNoise(ray_noise::RayNoise2(
-              noise_cfg[0], noise_cfg[1], noise_cfg[2], noise_cfg[3],
-              noise_cfg[4], noise_cfg[5], noise_cfg[6], seed));
-        } break;
+          noise_type = i;
+          break;
         }
       }
+    }
+    switch (noise_type) {
+    case 0: {
+      ray_caster->setNoise(
+          ray_noise::UniformNoise(noise_cfg[0], noise_cfg[1], seed));
+    } break;
+    case 1: {
+      ray_caster->setNoise(
+          ray_noise::GaussianNoise(noise_cfg[0], noise_cfg[1], seed));
+    } break;
+    case 2: {
+      ray_caster->setNoise(
+          ray_noise::RayNoise1(noise_cfg[0], noise_cfg[1], noise_cfg[2], seed));
+    } break;
+    case 3: {
+      ray_caster->setNoise(ray_noise::RayNoise2(
+          noise_cfg[0], noise_cfg[1], noise_cfg[2], noise_cfg[3], noise_cfg[4],
+          noise_cfg[5], noise_cfg[6], seed));
+    } break;
+    case 4: {
+      ray_caster->setNoise(ray_noise::StereoNoise(noise_cfg[0], seed));
+    } break;
+    default: {
+      mju_error("the noise has not set func");
+    }
     }
   }
   /*---------------- pluginstate ----------------  */
@@ -369,13 +394,6 @@ void RayPlugin::initSensor(const mjModel *m, mjData *d, int instance,
   if (!num_thread.empty()) {
     ray_caster->set_num_thread(num_thread[0]);
   }
-
-  /* lossangle */
-  auto lossangle =
-      ReadVector<int>(mj_getPluginConfig(m, instance, base_attributes[12]));
-  if (!lossangle.empty()) {
-    ray_caster->set_lossangle(lossangle[0]);
-  }
 }
 
 void RayPlugin::Visualize(const mjModel *m, mjData *d, const mjvOption *opt,
@@ -403,9 +421,8 @@ void RayPlugin::Visualize(const mjModel *m, mjData *d, const mjvOption *opt,
                                vis_cfg.hip_point.color);
 
   if (vis_cfg.normal.is_draw)
-    ray_caster->draw_normal(scn, vis_cfg.normal.ratio,
-                               vis_cfg.normal.width,
-                               vis_cfg.normal.color);
+    ray_caster->draw_normal(scn, vis_cfg.normal.ratio, vis_cfg.normal.width,
+                            vis_cfg.normal.color);
   mj_freeStack(d);
 }
 

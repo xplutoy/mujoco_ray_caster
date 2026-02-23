@@ -1,6 +1,8 @@
 #pragma once
 #include "Noise.hpp"
 #include "RayNoise.hpp"
+#include "engine/engine_util_blas.h"
+#include "engine/engine_util_errmem.h"
 #include "mujoco/mjthread.h"
 #include "mujoco/mjtnum.h"
 #include <array>
@@ -28,6 +30,7 @@ public:
   RayCasterType type = RayCasterType::none;
   bool is_detect_parentbody = false;
   mjtNum loss_angle = 0.0;
+  mjtNum min_energy = 0.0; // 反射法线和表面法线最小余弦
 };
 
 class RayCaster {
@@ -44,10 +47,13 @@ public:
    * @param v_ray_num 垂直射线数量
    * @param dis_range 距离范围 [最小，最大] (M)
    * @param is_detect_parentbody 是否检测自身
+   * @param loss_angle 丢失角度
+   * @param min_energy 最小检测能量
    */
   void _init(const mjModel *m, mjData *d, std::string cam_name, int h_ray_num,
              int v_ray_num, const std::array<mjtNum, 2> &dis_range,
-             bool is_detect_parentbody, mjtNum loss_angle = 0.0);
+             bool is_detect_parentbody, mjtNum loss_angle = 0.0,
+             mjtNum min_energy = 0.0);
 
   /** @brief 设置线程数量
    * @param n 线程数量
@@ -57,6 +63,11 @@ public:
    * @param n 射线丢失角度
    */
   void set_lossangle(mjtNum loss_angle);
+
+  /** @brief ldm反射到stereo_camera的光路法线和物体表面法线相差角度，(0,90)
+   * @param n 射线丢失角度
+   */
+  void set_min_energy(mjtNum min_energy);
 
   /** @brief 计算距离 数值存放在dist中*/
   virtual void compute_distance();
@@ -123,7 +134,7 @@ public:
   static int get_nray(RayCasterCfg &cfg);
   void setNoise(ray_noise::RayNoise2 noise);
 #if mjVERSION_HEADER > 340
-  void setNoise(ray_noise::RayNoise3 noise);
+  void setNoise(ray_noise::StereoNoise noise);
 #endif
 
   ray_noise::Noise *_noise;
@@ -151,23 +162,25 @@ public:
   mjtNum *ray_vec_offset;  // h_ray_num * v_ray_num * 3 世界坐标系下的位移
   int *geomids;            // 命中的geomid
   bool *is_lost;           // 是否丢失射线
+  bool *is_lost_noise;
   mjtNum *dist_ratio;
   mjtByte geomgroup[8] = {true,  true,  false,
                           false, false, false}; // 检测哪些类型的geom
   bool is_offert = true;
+  mjtNum min_energy = 0.0; // 最小能量
   RayCasterType type = RayCasterType::none;
   int num_thread = 0;
 
 #if mjVERSION_HEADER > 340
   mjtNum *ray_normal; // 射线法线
+  mjtNum *ray_energy; // 射线能量
 #endif
-  mjtNum loss_angle = 0.0;
+  mjtNum loss_angle = 0.0;     // 0-90
   mjtNum loss_angle_cos = 0.0; // 角度cos小于stereo_loss_angle_cos
   bool is_loss_angle = false;
 #if mjVERSION_HEADER > 340
   virtual void compute_loss_ray(int idx) {
-    if (is_loss_angle)
-    {
+    if (is_loss_angle) {
       const mjtNum *ray_ptr = ray_vec + idx * 3;
       mjtNum L[3] = {-ray_ptr[0], -ray_ptr[1], -ray_ptr[2]};
       mjtNum cos_light = mju_dot3(ray_normal, L);
@@ -176,6 +189,7 @@ public:
         pos_w[idx * 3] = pos_w[idx * 3 + 1] = pos_w[idx * 3 + 2] = NAN;
         dist[idx] = 0;
         dist_ratio[idx] = 0;
+        is_lost[idx] = true;
       }
     }
   };
@@ -212,7 +226,7 @@ public:
   void draw_line(mjvScene *scn, mjtNum *from, mjtNum *to, mjtNum width,
                  float *rgba);
   void draw_arrow(mjvScene *scn, mjtNum *from, mjtNum *to, mjtNum width,
-                 float *rgba);
+                  float *rgba);
   void draw_geom(mjvScene *scn, int type, mjtNum *size, mjtNum *pos,
                  mjtNum *mat, float rgba[4]);
 
@@ -297,10 +311,6 @@ public:
   void get_data_normalized(T &data, bool is_noise, bool is_inf_max, bool is_inv,
                            double scale) {
     for (int idx = 0; idx < nray; idx++) {
-      if (is_lost[idx]) {
-        data[idx] = 0.0;
-        continue;
-      }
       mjtNum distance;
       // 未命中
       if (geomids[idx] < 0) {
@@ -313,10 +323,18 @@ public:
       } else {
         // 命中
         if (is_noise == has_noise) {
+          if (is_lost_noise[idx]) {
+            data[idx] = 0.0;
+            continue;
+          }
           distance = dist[idx];
         } else {
           distance = dist_ratio[idx] * deep_max;
         }
+      }
+      if (is_lost[idx]) {
+        data[idx] = 0.0;
+        continue;
       }
       if (is_inv) {
         // 近 -> 大，远 -> 小
@@ -331,10 +349,6 @@ public:
   template <typename T>
   void get_data(T &data, bool is_noise = false, bool is_inf_max = true) {
     for (int idx = 0; idx < nray; idx++) {
-      if (is_lost[idx]) {
-        data[idx] = 0.0;
-        continue;
-      }
       // 未命中
       if (geomids[idx] < 0) {
         if (is_inf_max)
@@ -343,8 +357,16 @@ public:
           data[idx] = 0.0;
         continue;
       } else {
+        if (is_lost[idx]) {
+          data[idx] = 0.0;
+          continue;
+        }
         if (is_noise == has_noise) {
           // 使用带噪声的 dist（distance_to_camera）
+          if (is_lost_noise[idx]) {
+            data[idx] = 0.0;
+            continue;
+          }
           data[idx] = dist[idx];
         } else {
           // 使用无噪声：dist_ratio * deep_max
@@ -366,10 +388,6 @@ public:
   template <typename T>
   void get_distance_to_image_plane(T &data, bool is_noise, bool is_inf_max) {
     for (int idx = 0; idx < nray; idx++) {
-      if (is_lost[idx]) {
-        data[idx] = 0.0;
-        continue;
-      }
       // 未命中
       if (geomids[idx] < 0) {
         if (is_inf_max)
@@ -378,14 +396,15 @@ public:
           data[idx] = 0.0;
         continue;
       }
+      if (is_lost[idx]) {
+        data[idx] = 0.0;
+        continue;
+      }
 
       // 1) 取当前射线在相机坐标系下的方向向量 d =
       // (_ray_vec_x,_ray_vec_y,_ray_vec_z)
-      const mjtNum dx = _ray_vec[idx * 3 + 0];
-      const mjtNum dy = _ray_vec[idx * 3 + 1];
-      const mjtNum dz = _ray_vec[idx * 3 + 2];
-
-      const mjtNum d_norm = mju_sqrt(dx * dx + dy * dy + dz * dz);
+      const mjtNum dz = mju_abs(_ray_vec[idx * 3 + 2]);
+      const mjtNum d_norm = mju_norm3(_ray_vec + idx * 3);
       if (d_norm < 1e-12) {
         data[idx] = 0.0;
         continue;
@@ -395,6 +414,10 @@ public:
       mjtNum s;
       if (is_noise == has_noise) {
         // 使用带噪声的 dist（distance_to_camera）
+        if (is_lost_noise[idx]) {
+          data[idx] = 0.0;
+          continue;
+        }
         s = dist[idx];
       } else {
         // 使用无噪声：dist_ratio * deep_max
@@ -402,18 +425,8 @@ public:
       }
 
       // 3) 与相机平面法向 (-Z) 的夹角：cosθ = |dz| / ||d||
-      const mjtNum cos_theta = mju_abs(dz) / d_norm;
-
-      // 4) 距离到相机平面 = s * cosθ
-      mjtNum d_plane = s * cos_theta;
-
-      // 可选：限制在 [deep_min, deep_max]
-      if (d_plane < deep_min)
-        d_plane = deep_min;
-      if (d_plane > deep_max)
-        d_plane = deep_max;
-
-      data[idx] = d_plane;
+      const mjtNum cos_theta = dz / d_norm;
+      data[idx] = s * cos_theta;
     }
   }
 
@@ -422,10 +435,6 @@ public:
                                               bool is_inf_max, bool is_inv,
                                               double scale) {
     for (int idx = 0; idx < nray; idx++) {
-      if (is_lost[idx]) {
-        data[idx] = 0.0;
-        continue;
-      }
       mjtNum d_plane;
       // 未命中
       if (geomids[idx] < 0) {
@@ -436,11 +445,13 @@ public:
           continue;
         }
       } else {
-        const mjtNum dx = _ray_vec[idx * 3 + 0];
-        const mjtNum dy = _ray_vec[idx * 3 + 1];
-        const mjtNum dz = _ray_vec[idx * 3 + 2];
+        if (is_lost[idx]) {
+          data[idx] = 0.0;
+          continue;
+        }
 
-        const mjtNum d_norm = mju_sqrt(dx * dx + dy * dy + dz * dz);
+        const mjtNum dz = mju_abs(_ray_vec[idx * 3 + 2]);
+        const mjtNum d_norm = mju_norm3(_ray_vec + idx * 3);
         if (d_norm < 1e-12) {
           data[idx] = 0;
           continue;
@@ -448,18 +459,17 @@ public:
 
         mjtNum s;
         if (is_noise == has_noise) {
+          if (is_lost_noise[idx]) {
+            data[idx] = 0.0;
+            continue;
+          }
           s = dist[idx];
         } else {
           s = dist_ratio[idx] * deep_max;
         }
 
-        const mjtNum cos_theta = mju_abs(dz) / d_norm;
+        const mjtNum cos_theta = dz / d_norm;
         d_plane = s * cos_theta;
-
-        if (d_plane < deep_min)
-          d_plane = deep_min;
-        if (d_plane > deep_max)
-          d_plane = deep_max;
       }
 
       mjtNum v;
@@ -472,5 +482,16 @@ public:
       }
       data[idx] = v;
     }
+  }
+
+  template <typename T> void get_energy(T &data) {
+#if mjVERSION_HEADER > 340
+    for (int i = 0; i < nray; i++) {
+      data[i] = ray_energy[i];
+    }
+#else
+    mju_warning("get_energy need mujoco version >= 3.5.0 and the sensor suport "
+                "get_energy");
+#endif
   }
 };

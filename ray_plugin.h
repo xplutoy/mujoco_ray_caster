@@ -187,16 +187,17 @@ public:
       is_inv = true;
     if (data_type.find("data") != std::string::npos)
       type = DataType::data;
-    else if (data_type.find("image") != std::string::npos)
-      type = DataType::image;
-    else if (data_type.find("normal") != std::string::npos)
+    else if (data_type.find("image") != std::string::npos) {
+      if (data_type.find("distance_to_image_plane") != std::string::npos)
+        type = DataType::distance_to_image_plane;
+      else if (data_type.find("image_plane_image") != std::string::npos)
+        type = DataType::image_plane_image;
+      else if (data_type.find("image_plane_normal") != std::string::npos)
+        type = DataType::image_plane_normal;
+      else
+        type = DataType::image;
+    } else if (data_type.find("normal") != std::string::npos)
       type = DataType::normal;
-    else if (data_type.find("distance_to_image_plane") != std::string::npos)
-      type = DataType::distance_to_image_plane;
-    else if (data_type.find("image_plane_image") != std::string::npos)
-      type = DataType::image_plane_image;
-    else if (data_type.find("image_plane_normal") != std::string::npos)
-      type = DataType::image_plane_normal;
     else if (data_type.find("pos_w") != std::string::npos)
       type = DataType::pos_w;
     else if (data_type.find("pos_b") != std::string::npos)
@@ -246,14 +247,18 @@ public:
   int n_step = 0;
   std::string name;
   std::chrono::high_resolution_clock::time_point start;
-  static constexpr std::array<const char *, 14> base_attributes = {
+  static constexpr std::array<const char *, 15> base_attributes = {
       "draw_deep_ray",    "draw_deep_ray_ids", "draw_deep",
       "draw_hip_point",   "sensor_data_types", "noise_type",
       "noise_cfg",        "geomgroup",         "detect_parentbody",
       "compute_time_log", "n_step_update",     "num_thread",
-      "lossangle",        "draw_normal"};
+      "lossangle",        "draw_normal",       "min_energy"};
   std::vector<std::pair<std::string_view, int>> noise_attributes = {
-      {"uniform", 3}, {"gaussian", 3}, {"noise1", 4}, {"noise2", 8}};
+      {"uniform", 3},
+      {"gaussian", 3},
+      {"noise1", 4},
+      {"noise2", 8},
+      {"stereo_noise", 2}};
 };
 
 } // namespace mujoco::plugin::sensor

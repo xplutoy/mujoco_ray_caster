@@ -38,7 +38,8 @@ void RayCaster::init(const RayCasterCfg &cfg) {
 void RayCaster::_init(const mjModel *m, mjData *d, std::string cam_name,
                       int h_ray_num, int v_ray_num,
                       const std::array<mjtNum, 2> &dis_range,
-                      bool is_detect_parentbody, mjtNum loss_angle) {
+                      bool is_detect_parentbody, mjtNum loss_angle,
+                      mjtNum min_energy) {
   this->m = m;
   this->d = d;
   this->cam_id = mj_name2id(m, mjOBJ_CAMERA, cam_name.c_str());
@@ -77,10 +78,13 @@ void RayCaster::_init(const mjModel *m, mjData *d, std::string cam_name,
   dist = new mjtNum[h_ray_num * v_ray_num];
   dist_ratio = new mjtNum[h_ray_num * v_ray_num];
   is_lost = new bool[h_ray_num * v_ray_num];
+  is_lost_noise = new bool[h_ray_num * v_ray_num];
 #if mjVERSION_HEADER > 340
   ray_normal = new mjtNum[h_ray_num * v_ray_num * 3];
+  ray_energy = new mjtNum[h_ray_num * v_ray_num];
 #endif
   set_lossangle(loss_angle);
+  set_min_energy(min_energy);
 
   _noise = new ray_noise::Noise;
   create_rays();
@@ -107,16 +111,24 @@ void RayCaster::set_num_thread(int n) {
 void RayCaster::set_lossangle(mjtNum loss_angle) {
   if (loss_angle == 0.0)
     return;
-  if (loss_angle < 0 || loss_angle > 180) {
-    mju_error("loss_angle must betwon in (0,180)");
+  if (loss_angle < 0 || loss_angle > 90) {
+    mju_error("loss_angle must betwon in (0,90)");
     return;
   }
   this->loss_angle = loss_angle;
   this->loss_angle_cos = mju_cos(loss_angle * M_PI / 180);
   is_loss_angle = true;
-  if (loss_angle > 0.0 && mjVERSION_HEADER < 341) {
+  if (loss_angle > 0.0 && mjVERSION_HEADER <= 340) {
     is_loss_angle = false;
-    mju_warning("mujoco_version < 3.4.1,loss_angle is unable.");
+    mju_warning("mujoco_version < 3.5.0,loss_angle is unable.");
+  }
+}
+
+void RayCaster::set_min_energy(mjtNum min_energy) {
+  if (min_energy == 0.0) {
+    this->min_energy = loss_angle_cos;
+  } else {
+    this->min_energy = min_energy;
   }
 }
 
@@ -150,14 +162,14 @@ void RayCaster::setNoise(ray_noise::RayNoise2 noise) {
 }
 
 #if mjVERSION_HEADER > 340
-void RayCaster::setNoise(ray_noise::RayNoise3 noise) {
+void RayCaster::setNoise(ray_noise::StereoNoise noise) {
   delete _noise;
-  auto n = ray_noise::RayNoise3(noise);
-  n.is_lost = is_lost;
+  auto n = ray_noise::StereoNoise(noise);
+  n.is_lost_noise = is_lost_noise;
   n.nray = nray;
-  n.ray_vec = ray_vec;
-  n.ray_normal = ray_normal;
-  _noise = new ray_noise::RayNoise3(n);
+  n.ray_energy = ray_energy;
+  n.min_energy = min_energy;
+  _noise = new ray_noise::StereoNoise(n);
   has_noise = true;
 }
 #endif
@@ -250,6 +262,7 @@ void RayCaster::compute_ray(int start, int end) {
       dist_ratio[i] = 1;
     } else if (dist_ratio[i] > 1) {
       dist_ratio[i] = 1;
+      geomids[i] = -1;
     } else if (dist_ratio[i] < deep_min_ratio) {
       dist_ratio[i] = deep_min_ratio;
     }
@@ -465,7 +478,7 @@ void RayCaster::draw_hip_point(mjvScene *scn, int ratio, mjtNum size,
   for (int i = 0; i < v_ray_num; i += ratio) {
     for (int j = 0; j < h_ray_num; j += ratio) {
       int idx = _get_idx(i, j);
-      if (std::isnan(pos_w[idx * 3]))
+      if (std::isnan(pos_w[idx * 3]) || is_lost[idx] || is_lost_noise[idx])
         continue;
       draw_geom(scn, mjGEOM_SPHERE, size_, pos_w + (idx * 3), mat, color_);
     }
@@ -491,8 +504,8 @@ void RayCaster::draw_normal(mjvScene *scn, int ratio, int width, float *color) {
       int idx = _get_idx(i, j);
       if (std::isnan(pos_w[idx * 3]))
         continue;
-      mju_add3(end, ray_normal+ (idx * 3), pos_w + (idx * 3));
-      draw_arrow(scn, pos_w + (idx * 3), end, width*0.001, color_);
+      mju_add3(end, ray_normal + (idx * 3), pos_w + (idx * 3));
+      draw_arrow(scn, pos_w + (idx * 3), end, width * 0.001, color_);
     }
   }
 #endif

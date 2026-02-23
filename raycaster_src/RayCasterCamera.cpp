@@ -1,5 +1,6 @@
 #include "RayCasterCamera.h"
 #include "engine/engine_util_blas.h"
+#include "engine/engine_util_misc.h"
 #include "mujoco/mjtnum.h"
 #include <cmath>
 #include <iostream>
@@ -7,9 +8,7 @@
 
 RayCasterCamera::RayCasterCamera() {}
 RayCasterCamera::RayCasterCamera(const RayCasterCameraCfg &cfg) { init(cfg); }
-RayCasterCamera::~RayCasterCamera() {
-  // 资源释放由基类析构函数处理
-}
+RayCasterCamera::~RayCasterCamera() {}
 void RayCasterCamera::init(const RayCasterCameraCfg &cfg) {
   this->baseline = cfg.baseline;
   this->focal_length = cfg.focal_length;
@@ -27,11 +26,13 @@ void RayCasterCamera::init(const RayCasterCameraCfg &cfg) {
   this->v_pixel_size =
       (this->horizontal_aperture / this->aspect_ratio) / cfg.v_ray_num;
 
-  if (this->baseline > 0.0)
+  if (this->baseline > 0.0) {
     is_compute_hit = true;
+  }
+
   // 调用基类的 protected 初始化函数
   _init(cfg.m, cfg.d, cfg.cam_name, cfg.h_ray_num, cfg.v_ray_num, cfg.dis_range,
-        cfg.is_detect_parentbody,cfg.loss_angle);
+        cfg.is_detect_parentbody, cfg.loss_angle, cfg.min_energy);
 #if mjVERSION_HEADER > 340
   left_ray_normal = new mjtNum[h_ray_num * v_ray_num * 3];
   right_ray_normal = new mjtNum[h_ray_num * v_ray_num * 3];
@@ -91,30 +92,40 @@ void RayCasterCamera::compute_stereo_ray(int start, int end) {
         mj_ray(m, d, right_pos_w, right_stereo_ray, geomgroup, 1,
                no_detect_body_id, geomid, right_ray_normal + idx * 3);
     if (is_loss_angle) {
-      mjtNum ldm_ray_normal[3] = {ray_normal[idx * 3],
-                                  ray_normal[idx * 3 + 1],
+      mjtNum ldm_ray_normal[3] = {ray_normal[idx * 3], ray_normal[idx * 3 + 1],
                                   ray_normal[idx * 3 + 2]};
       mju_normalize3(ldm_ray_normal); // 确保物体表面法线是单位向量
-      // (表面 -> LDM)
+      // (命中点 -> LDM)
       const mjtNum *ldm_ray_ptr = ray_vec + idx * 3;
       mjtNum L[3] = {-ldm_ray_ptr[0], -ldm_ray_ptr[1], -ldm_ray_ptr[2]};
       mju_normalize3(L);
-      // (表面 -> 相机)
+      // (命中点 -> 相机)
       mjtNum V_left[3] = {-left_stereo_ray[0], -left_stereo_ray[1],
                           -left_stereo_ray[2]};
-      mju_normalize3(V_left);
+
       mjtNum V_right[3] = {-right_stereo_ray[0], -right_stereo_ray[1],
                            -right_stereo_ray[2]};
-      mju_normalize3(V_right);
-      mjtNum cos_cam_left = mju_dot3(ldm_ray_normal, V_left);
-      mjtNum cos_cam_right = mju_dot3(ldm_ray_normal, V_right);
+
+      // 计算反射光路法线和表面法线的最小余弦值
+      mjtNum left_normal[3], right_normal[3];
+      mju_add3(left_normal, V_left, L);
+      mju_scl3(left_normal, left_normal, 0.5);
+      mju_normalize3(left_normal);
+
+      mju_add3(right_normal, V_right, L);
+      mju_scl3(right_normal, right_normal, 0.5);
+      mju_normalize3(right_normal);
+
+      mjtNum cos_cam_left = mju_dot3(ldm_ray_normal, left_normal);
+      mjtNum cos_cam_right = mju_dot3(ldm_ray_normal, right_normal);
       mjtNum cos_light = mju_dot3(ldm_ray_normal, L);
-      if (cos_cam_left < loss_angle_cos ||
-          cos_cam_right < loss_angle_cos ||
-          cos_light < loss_angle_cos) {
+      ray_energy[idx] = mju_min(cos_cam_left, cos_cam_right);
+
+      if (cos_light < loss_angle_cos || ray_energy[idx] < min_energy) {
         pos_w[idx * 3] = pos_w[idx * 3 + 1] = pos_w[idx * 3 + 2] = NAN;
         dist[idx] = 0;
         dist_ratio[idx] = 0;
+        is_lost[idx] = true;
         continue;
       }
     }

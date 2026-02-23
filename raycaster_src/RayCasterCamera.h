@@ -18,6 +18,7 @@ public:
   bool is_detect_parentbody = false;
   mjtNum baseline = 0.0; // 基线距离 (cm)
   mjtNum loss_angle=0.0;
+  mjtNum min_energy = 0.0; //反射法线和表面法线最小余弦
 };
 
 class RayCasterCamera : public RayCaster {

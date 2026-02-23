@@ -1,5 +1,6 @@
 #pragma once
 #include "Noise.hpp"
+#include "engine/engine_util_errmem.h"
 #include "mujoco/mjtnum.h"
 #include "mujoco/mujoco.h"
 #include <cmath>
@@ -169,33 +170,33 @@ private:
   }
 };
 
-class RayNoise3 : public std_noise::Noise {
+class StereoNoise : public std_noise::Noise {
+  /*
+    对stereocamera的反射法线和平面法线最小的余弦：ray_energy进行概率丢失
+    E_normalized = (ray_energy - min_energy) / (1 - min_energy)
+    P_loss = (1-E_normalized)^power
+  */
 public:
-  RayNoise3(double max_incidence_angle_deg) {
-    if (max_incidence_angle_deg < 0)
-      max_incidence_angle_deg = 0;
-    if (max_incidence_angle_deg > 90)
-      max_incidence_angle_deg = 90;
-    double rad = max_incidence_angle_deg * M_PI / 180.0;
-    this->min_reflection_intensity = std::cos(rad);
-  };
-  mjtNum *ray_vec;
-  mjtNum *ray_normal;
-  bool *is_lost;
-  mjtNum min_reflection_intensity;
+  StereoNoise(int power = 1, unsigned int seed = 0)
+      : _power(power), gen_(seed != 0 ? seed : std::random_device{}()) {};
+  mjtNum *ray_energy;
+  bool *is_lost_noise;
   int nray = 0;
+  mjtNum min_energy = 0.0;
+  int _power;
+
+  std::mt19937 gen_{std::random_device{}()};
+  std::uniform_real_distribution<mjtNum> dist_{0.0, 1.0};
   void produce_united_noise() {
-    for (int i = 0; i < nray; ++i) {
-      int idx = i * 3;
-      mjtNum dot = ray_vec[idx] * ray_normal[idx] +
-                   ray_vec[idx + 1] * ray_normal[idx + 1] +
-                   ray_vec[idx + 2] * ray_normal[idx + 2];
-      mjtNum intensity = (dot < 0) ? -dot : dot;
-      if (intensity < min_reflection_intensity) {
-        is_lost[i] = true;
-      } else {
-        is_lost[i] = false;
-      }
+    mjtNum denom = (1.0 - min_energy);
+    if (denom <= 0) {
+      mju_warning("min_energy must < 1.0");
+      return;
+    }
+    for (int idx = 0; idx < nray; ++idx) {
+      mjtNum X = 1 - (ray_energy[idx] - min_energy) / denom;
+      mjtNum P = mju_pow(X, _power);
+      is_lost_noise[idx] = (dist_(gen_) < P);
     }
   };
 };
