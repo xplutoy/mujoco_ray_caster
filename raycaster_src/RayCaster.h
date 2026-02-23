@@ -122,7 +122,7 @@ public:
 
   static int get_nray(RayCasterCfg &cfg);
   void setNoise(ray_noise::RayNoise2 noise);
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   void setNoise(ray_noise::RayNoise3 noise);
 #endif
 
@@ -158,13 +158,13 @@ public:
   RayCasterType type = RayCasterType::none;
   int num_thread = 0;
 
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   mjtNum *ray_normal; // 射线法线
 #endif
   mjtNum loss_angle = 0.0;
   mjtNum loss_angle_cos = 0.0; // 角度cos小于stereo_loss_angle_cos
   bool is_loss_angle = false;
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   virtual void compute_loss_ray(int idx) {
     if (is_loss_angle)
     {

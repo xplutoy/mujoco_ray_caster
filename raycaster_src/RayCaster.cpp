@@ -77,7 +77,7 @@ void RayCaster::_init(const mjModel *m, mjData *d, std::string cam_name,
   dist = new mjtNum[h_ray_num * v_ray_num];
   dist_ratio = new mjtNum[h_ray_num * v_ray_num];
   is_lost = new bool[h_ray_num * v_ray_num];
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   ray_normal = new mjtNum[h_ray_num * v_ray_num * 3];
 #endif
   set_lossangle(loss_angle);
@@ -149,7 +149,7 @@ void RayCaster::setNoise(ray_noise::RayNoise2 noise) {
   has_noise = true;
 }
 
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
 void RayCaster::setNoise(ray_noise::RayNoise3 noise) {
   delete _noise;
   auto n = ray_noise::RayNoise3(noise);
@@ -237,7 +237,7 @@ void RayCaster::compute_ray(int start, int end) {
       pnt[1] += ray_vec_offset[i * 3 + 1];
       pnt[2] += ray_vec_offset[i * 3 + 2];
     }
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
     dist_ratio[i] = mj_ray(m, d, pnt, ray_vec + i * 3, geomgroup, 1,
                            no_detect_body_id, geomid, ray_normal + i * 3);
 #else
@@ -473,7 +473,7 @@ void RayCaster::draw_hip_point(mjvScene *scn, int ratio, mjtNum size,
 }
 
 void RayCaster::draw_normal(mjvScene *scn, int ratio, int width, float *color) {
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   if (!is_compute_hit) {
     is_compute_hit = true;
     compute_hit();

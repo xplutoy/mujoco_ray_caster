@@ -37,7 +37,7 @@ private:
   mjtNum baseline = 0.0;                // 基线距离 (cm)
   mjtNum left_pos_w[3], right_pos_w[3]; // Stereo相机位置
 
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   mjtNum *left_ray_normal = nullptr;
   mjtNum *right_ray_normal = nullptr;
   void compute_loss_ray(int idx) override {}

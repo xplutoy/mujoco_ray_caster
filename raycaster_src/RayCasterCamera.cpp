@@ -32,7 +32,7 @@ void RayCasterCamera::init(const RayCasterCameraCfg &cfg) {
   // 调用基类的 protected 初始化函数
   _init(cfg.m, cfg.d, cfg.cam_name, cfg.h_ray_num, cfg.v_ray_num, cfg.dis_range,
         cfg.is_detect_parentbody,cfg.loss_angle);
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
   left_ray_normal = new mjtNum[h_ray_num * v_ray_num * 3];
   right_ray_normal = new mjtNum[h_ray_num * v_ray_num * 3];
 #endif
@@ -83,7 +83,7 @@ void RayCasterCamera::compute_stereo_ray(int start, int end) {
     mju_sub3(left_stereo_ray, target, left_pos_w);
     mju_sub3(right_stereo_ray, target, right_pos_w);
 
-#if mjVERSION_HEADER >= 341
+#if mjVERSION_HEADER > 340
     mjtNum left_ratio =
         mj_ray(m, d, left_pos_w, left_stereo_ray, geomgroup, 1,
                no_detect_body_id, geomid, left_ray_normal + idx * 3);
