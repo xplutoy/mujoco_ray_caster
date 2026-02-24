@@ -169,6 +169,8 @@ Noise model explanation:[stereo_noise](compute.md#3-stereo-noise--min-energy)
 <img src="./image/stereo_noise2.png" width=400/>
 <img src="./image/stereo_noise_o.png" width=400/>
 <img src="./image/stereo_noise_d.png" width=400/>
+<img src="./image/stereo_noise_real1.png" width=400/>
+<img src="./image/stereo_noise_real2.png" width=400/>
 </div>
 
 ### Other
