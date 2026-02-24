@@ -59,9 +59,9 @@
 
       <!-- <config key="draw_normal" value="1 5 " /> -->
 
-      <config key="sensor_data_types" value="distance_to_image_plane data distance_to_image_plane_noise" />
+      <config key="sensor_data_types" value="distance_to_image_plane distance_to_image_plane_noise" />
       <config key="noise_type" value="stereo_noise" />
-      <config key="noise_cfg" value="6 0" />
+      <config key="noise_cfg" value="4 0" />
       
       <config key="baseline" value="0.095" />
       <!-- <config key="num_thread" value="4" /> -->

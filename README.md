@@ -5,8 +5,9 @@
 
 A raycaster sensor plugin bound to camera, implemented based on mj_ray. The raycaster parameters closely match those of IsaacLab. The `raycaster_src` can be used directly with C++ API, [reference](https://github.com/Albusgive/go2w_sim2sim)
 
-[📺 Video Demo](https://www.bilibili.com/video/BV1SSe1zLEVf/?spm_id_from=333.1387.homepage.video_card.click&vd_source=71e0e4952bb37bdc39eaabd9c08be754)
-[🤖 Plugin Function Demo](https://www.bilibili.com/video/BV1wYnvzgExg/?spm_id_from=333.1387.homepage.video_card.click&vd_source=71e0e4952bb37bdc39eaabd9c08be754)
+[📺 Video Demo](https://www.bilibili.com/video/BV1SSe1zLEVf/?spm_id_from=333.1387.homepage.video_card.click&vd_source=71e0e4952bb37bdc39eaabd9c08be754)     
+[🤖 Plugin Function Demo](https://www.bilibili.com/video/BV1wYnvzgExg/?spm_id_from=333.1387.homepage.video_card.click&vd_source=71e0e4952bb37bdc39eaabd9c08be754)   
+[🎮 DEMO Testing](#demo)    
 
 ## sensors
 mujoco.sensor.ray_caster
@@ -140,6 +141,7 @@ example:
 | gaussian  | mean std seed |
 | noise1    | low high zero_probability seed |
 | noise2    | low high zero_probability min_angle max_angle low_probability high_probability seed |
+|stereo_noise|pow seed|
 
 #### noise1
 Adds random zero values on top of mean noise
@@ -158,6 +160,17 @@ noise2 is noise based on approximate ray incident angles. On top of noise1, from
 <img src="./image/noise2_8.png" width=200/>
 </div>
 
+#### stereo_noise
+When using stereo_noise, ensure the validity of baseline, lossangle, and min_energy.    
+<font color="red">Note: This noise requires Mujoco version >= 3.5.0</font>      
+Noise model explanation:[stereo_noise](compute.md#3-stereo-noise--min-energy)
+<div align="center">
+<img src="./image/stereo_noise1.png" width=400/>
+<img src="./image/stereo_noise2.png" width=400/>
+<img src="./image/stereo_noise_o.png" width=400/>
+<img src="./image/stereo_noise_d.png" width=400/>
+</div>
+
 ### Other
 
 **compute_time_log: real(1), "0"**
@@ -170,8 +183,8 @@ noise2 is noise based on approximate ray incident angles. On top of noise1, from
 - Add n threads for ray computation to improve performance. When using this parameter with many threads, you may need to restart the program each time
 
 **lossangle: real(1), "0"**
-- Angle difference between the vector from hit point to camera and the normal vector. Rays are lost when the angle exceeds this value. Unit: degrees, range (0, 180)
-- Note: This feature requires mujoco >= 3.4.1
+- Angle difference between the vector from hit point to camera and the normal vector. Rays are lost when the angle exceeds this value. Unit: degrees, range (0, 180)        
+<font color="red">This parameter requires Mujoco version >= 3.5.0</font>      
 
 As shown below: The left image has lossangle enabled, the right image shows a normal camera. See [ray_caster3.xml](./model/ray_caster3.xml) for demonstration.
 
@@ -216,9 +229,9 @@ As shown below: The left image has lossangle enabled, the right image shows a no
 <img src="./image/baseline2.png" width=300/>
 </div>
 
-**lossangle: real(1), "0"**
-- Extension of the original lossangle for binocular depth cameras
-- The angle difference between the light path normal reflected from LDM to stereo_camera and the object surface normal
+**min_energy:real(1),“0**   
+&emsp;Ray loss threshold. See[min_energy](compute.md#3-stereo-noise--min-energy)        
+<font color="red">This parameter requires Mujoco version >= 3.5.0</font>  
 
 ## RayCasterLidar
 
@@ -304,9 +317,11 @@ make
 
 ## Python
 ```
+pip install mujoco-python-viewer
 cd demo/Python
 python3 sensor_data_viewer.py
 python3 view_launch.py
+python3 stereo_camera.py
 ```
 
 ## ROS2

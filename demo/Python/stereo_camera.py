@@ -97,8 +97,8 @@ def visualize_block(block_data, length, idx, h_rays, v_rays, win_prefix="block",
     )
 
     # 在图像上显示当前的固定范围信息，方便调试
-    cv2.putText(img_show, f"Range: [{vmin:.2f}, {vmax:.2f}]", (10, 20), 
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+    # cv2.putText(img_show, f"Range: [{vmin:.2f}, {vmax:.2f}]", (10, 20), 
+    #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     win_name = f"{win_prefix}_{idx}_len{length}"
     cv2.imshow(win_name, img_show)
