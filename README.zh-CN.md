@@ -109,7 +109,7 @@ exapmle:
 ```
 
 ### Noise
-**noise_type:[uniform,gaussian,noise1,noise2]**     
+**noise_type:[uniform,gaussian,noise1,noise2,stereo_noise]**     
 &emsp;噪声类型
 **noise_cfg:n**     
 |noise_type|noise_cfg|

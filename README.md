@@ -130,7 +130,7 @@ example:
 
 ### Noise
 
-**noise_type: [uniform, gaussian, noise1, noise2]**
+**noise_type: [uniform, gaussian, noise1,noise2,stereo_noise]**
 - Noise type
 
 **noise_cfg: n**
