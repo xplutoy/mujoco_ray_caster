@@ -187,7 +187,7 @@ Noise model explanation:[stereo_noise](compute.md#3-stereo-noise--min-energy)
 - Add n threads for ray computation to improve performance. When using this parameter with many threads, you may need to restart the program each time
 
 **lossangle: real(1), "0"**
-- Angle difference between the vector from hit point to camera and the normal vector. Rays are lost when the angle exceeds this value. Unit: degrees, range (0, 180)        
+- Angle difference between the vector from hit point to camera and the normal vector. Rays are lost when the angle exceeds this value. Unit: degrees, range (0, 90)        
 <font color="red">This parameter requires Mujoco version >= 3.5.0</font>      
 
 As shown below: The left image has lossangle enabled, the right image shows a normal camera. See [ray_caster3.xml](./model/ray_caster3.xml) for demonstration.
