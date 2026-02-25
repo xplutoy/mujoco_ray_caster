@@ -45,9 +45,9 @@ A probabilistic model is established to simulate this data loss:
     $ E = \min(\cos(\theta 1), \cos(\theta 2)) $
 
 3.  **Threshold Check & Probability Calculation**:
-    The calculated energy $E$ is compared with the parameter `min_energy`:
-    *   **Case 1**: If $E < \text{min\_energy}$, the data is lost immediately.
-    *   **Case 2**: If $E > \text{min\_energy}$, the probability of loss ($P_{loss}$) is calculated.
+    The calculated energy $E$ is compared with the parameter `min_energy`:      
+    **Case 1**: If $E < \text{min\_energy}$, the data is lost immediately.      
+    **Case 2**: If $E > \text{min\_energy}$, the probability of loss ($P_{loss}$) is calculated.        
 
     The noise model parameter `pow` is the exponent applied to the normalized inverted energy:
 
