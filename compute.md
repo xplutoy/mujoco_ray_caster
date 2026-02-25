@@ -49,9 +49,9 @@ A probabilistic model is established to simulate this data loss:
     *   **Case 1**: If E <= min_energy, the data is lost immediately.       
     *   **Case 2**: If E > min_energy, the probability of loss ($P_{loss}$) is calculated.      
 
-    The noise model parameter `pow` is the exponent applied to the normalized inverted energy:
+    The noise model parameter `pow` is the exponent applied to the normalized inverted energy:      
 
-    $$X = 1 - \frac{E}{1 - \text{min\_energy}}$$
+    $$X = 1 - \frac{E}{1 - min_energy}$$
 
     $$P_{loss} = X^{pow}$$
 
