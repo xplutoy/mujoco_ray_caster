@@ -42,7 +42,7 @@ A probabilistic model is established to simulate this data loss:
     $\theta_1$ and $\theta_2$ represent the angles between the return path vectors (to the Stereo Camera) and the surface normal at the hit point. These are obtained by calculating the cosine similarity $\cos(\theta)$ between the `stereo_ray_normal` and the `hit_face_normal`.
 
 2.  **Calculate Energy ($E$)**:
-    $$ E = \min(\cos(\theta_1), \cos(\theta_2)) $$
+    $$ E = \min(\cos(\theta 1), \cos(\theta 2)) $$
 
 3.  **Threshold Check & Probability Calculation**:
     The calculated energy $E$ is compared with the parameter `min_energy`:
