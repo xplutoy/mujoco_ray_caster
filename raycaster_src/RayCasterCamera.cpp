@@ -1,6 +1,4 @@
 #include "RayCasterCamera.h"
-#include "engine/engine_util_blas.h"
-#include "engine/engine_util_misc.h"
 #include "mujoco/mjtnum.h"
 #include <cmath>
 #include <iostream>
