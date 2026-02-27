@@ -257,6 +257,7 @@ void RayCaster::compute_ray(int start, int end) {
 #endif
     geomids[i] = geomid[0];
     is_lost[i] = false;
+    is_lost_noise[i] = false;
     if (geomid[0] == -1) {
       dist_ratio[i] = 1;
     } else if (dist_ratio[i] > 1) {
