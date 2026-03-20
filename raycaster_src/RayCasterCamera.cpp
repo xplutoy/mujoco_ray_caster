@@ -37,6 +37,7 @@ void RayCasterCamera::init(const RayCasterCameraCfg &cfg) {
 #endif
 }
 
+
 void RayCasterCamera::compute_ray_vec_virtual_plane() {
   for (int i = 0; i < v_ray_num; i++) {
     for (int j = 0; j < h_ray_num; j++) {

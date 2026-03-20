@@ -17,8 +17,8 @@ public:
   std::array<mjtNum, 2> dis_range = {0.0, 100.0};
   bool is_detect_parentbody = false;
   mjtNum baseline = 0.0; // 基线距离 (cm)
-  mjtNum loss_angle=0.0;
-  mjtNum min_energy = 0.0; //反射法线和表面法线最小余弦
+  mjtNum loss_angle = 0.0;
+  mjtNum min_energy = 0.0; // 反射法线和表面法线最小余弦
 };
 
 class RayCasterCamera : public RayCaster {
@@ -27,6 +27,7 @@ public:
   RayCasterCamera(const RayCasterCameraCfg &cfg);
   ~RayCasterCamera();
   void init(const RayCasterCameraCfg &cfg);
+  
 
 private:
   mjtNum focal_length = 24.0;          // 焦距 (cm)

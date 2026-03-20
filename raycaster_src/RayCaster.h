@@ -53,6 +53,17 @@ public:
              bool is_detect_parentbody, mjtNum loss_angle = 0.0,
              mjtNum min_energy = 0.0);
 
+  /** @brief 更换mjModel和mjData
+   * @param m mjModel
+   * @param d mjData
+   */
+  void change_data(const mjModel *m, mjData *d);
+
+  /** @brief 启用或禁用射线测量
+   * @param enable 是否启用
+   */
+  void enable_sensor(bool enable);
+
   /** @brief 设置线程数量
    * @param n 线程数量
    */
@@ -143,7 +154,8 @@ public:
 
   const mjModel *m;
   mjData *d;
-  int cam_id;  // 相机id
+  int cam_id; // 相机id
+  std::string _cam_name;
   mjtNum *pos; // 相机位置
   mjtNum *mat; // 相机的旋转矩阵
   mjtNum yaw = 0.0;
@@ -165,6 +177,7 @@ public:
   mjtByte geomgroup[8] = {true,  true,  false,
                           false, false, false}; // 检测哪些类型的geom
   bool is_offert = true;
+  bool enable = true;
   mjtNum min_energy = 0.0; // 最小能量
   RayCasterType type = RayCasterType::none;
   int num_thread = 0;
@@ -283,6 +296,12 @@ private:
 
   /*-----------模板-----------*/
   template <typename T> void _get_data_pos_dim1(T &data, const mjtNum *pos) {
+    if (!enable) {
+      for (int i = 0; i < nray; i++) {
+        data[i * 3] = data[i * 3 + 1] = data[i * 3 + 2] = NAN;
+      }
+      return;
+    }
     for (int i = 0; i < v_ray_num; i++) {
       for (int j = 0; j < h_ray_num; j++) {
         int idx = _get_idx(i, j);
@@ -294,6 +313,12 @@ private:
   }
 
   template <typename T> void _get_data_pos_dim2(T &data, const mjtNum *pos) {
+    if (!enable) {
+      for (int i = 0; i < nray; i++) {
+        data[i][0] = data[i][1] = data[i][2] = NAN;
+      }
+      return;
+    }
     for (int i = 0; i < v_ray_num; i++) {
       for (int j = 0; j < h_ray_num; j++) {
         int idx = _get_idx(i, j);
@@ -308,6 +333,12 @@ public:
   template <typename T>
   void get_data_normalized(T &data, bool is_noise, bool is_inf_max, bool is_inv,
                            double scale) {
+    if (!enable) {
+      for (int idx = 0; idx < nray; idx++) {
+        data[idx] = 0.0;
+      }
+      return;
+    }
     for (int idx = 0; idx < nray; idx++) {
       mjtNum distance;
       // 未命中
@@ -346,6 +377,12 @@ public:
 
   template <typename T>
   void get_data(T &data, bool is_noise = false, bool is_inf_max = true) {
+    if (!enable) {
+      for (int idx = 0; idx < nray; idx++) {
+        data[idx] = 0.0;
+      }
+      return;
+    }
     for (int idx = 0; idx < nray; idx++) {
       // 未命中
       if (geomids[idx] < 0) {
@@ -385,6 +422,12 @@ public:
   // 未归一化的 distance_to_image_plane（在相机坐标系中直接计算）
   template <typename T>
   void get_distance_to_image_plane(T &data, bool is_noise, bool is_inf_max) {
+    if (!enable) {
+      for (int idx = 0; idx < nray; idx++) {
+        data[idx] = 0.0;
+      }
+      return;
+    }
     for (int idx = 0; idx < nray; idx++) {
       // 未命中
       if (geomids[idx] < 0) {
@@ -432,6 +475,12 @@ public:
   void get_distance_to_image_plane_normalized(T &data, bool is_noise,
                                               bool is_inf_max, bool is_inv,
                                               double scale) {
+    if (!enable) {
+      for (int idx = 0; idx < nray; idx++) {
+        data[idx] = 0.0;
+      }
+      return;
+    }
     for (int idx = 0; idx < nray; idx++) {
       mjtNum d_plane;
       // 未命中

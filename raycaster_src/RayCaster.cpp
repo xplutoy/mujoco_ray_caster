@@ -41,7 +41,8 @@ void RayCaster::_init(const mjModel *m, mjData *d, std::string cam_name,
                       mjtNum min_energy) {
   this->m = m;
   this->d = d;
-  this->cam_id = mj_name2id(m, mjOBJ_CAMERA, cam_name.c_str());
+  this->_cam_name = std::move(cam_name);
+  this->cam_id = mj_name2id(m, mjOBJ_CAMERA, this->_cam_name.c_str());
   if (cam_id == -1) {
     mju_error("RayCaster: no found camera name");
   }
@@ -88,6 +89,22 @@ void RayCaster::_init(const mjModel *m, mjData *d, std::string cam_name,
   _noise = new ray_noise::Noise;
   create_rays();
 }
+
+void RayCaster::change_data(const mjModel *m, mjData *d) {
+  this->m = m;
+  this->d = d;
+  this->cam_id = mj_name2id(m, mjOBJ_CAMERA, this->_cam_name.c_str());
+  if (cam_id == -1) {
+    mju_error("RayCaster: no found camera name");
+  }
+  this->pos = d->cam_xpos + cam_id * 3;
+  this->mat = d->cam_xmat + cam_id * 9;
+  if (no_detect_body_id != -1) {
+    no_detect_body_id = m->cam_bodyid[cam_id];
+  }
+};
+
+void RayCaster::enable_sensor(bool enable) { this->enable = enable; }
 
 void RayCaster::set_num_thread(int n) {
   if (n == 0)
@@ -278,7 +295,8 @@ void RayCaster::compute_ray(int start, int end) {
 }
 
 void RayCaster::compute_distance() {
-
+  if (!enable)
+    return;
   compute_ray_vec();
 
   if (num_thread > 0) {
@@ -378,6 +396,8 @@ void RayCaster::draw_geom(mjvScene *scn, int type, mjtNum *size, mjtNum *pos,
 
 void RayCaster::draw_ray(int idx, int width, float *color, mjvScene *scn,
                          bool is_scale) {
+  if (!enable)
+    return;
   mjtNum start[3] = {pos[0], pos[1], pos[2]};
   mjtNum end[3] = {pos[0], pos[1], pos[2]};
   if (is_offert) {
@@ -394,6 +414,8 @@ void RayCaster::draw_ray(int idx, int width, float *color, mjvScene *scn,
 
 void RayCaster::draw_deep_ray(mjvScene *scn, int ratio, int width, bool edge,
                               float *color) {
+  if (!enable)
+    return;
   float color_[4] = {1.0, 0.0, 0.0, 1.0};
   if (color != nullptr) {
     color_[0] = color[0];
@@ -425,6 +447,8 @@ void RayCaster::draw_deep_ray(mjvScene *scn, int ratio, int width, bool edge,
 }
 
 void RayCaster::draw_deep_ray(mjvScene *scn, int idx, int width, float *color) {
+  if (!enable)
+    return;
   float color_[4] = {1.0, 0.0, 0.0, 1.0};
   if (color != nullptr) {
     color_[0] = color[0];
@@ -444,6 +468,8 @@ void RayCaster::draw_deep_ray(mjvScene *scn, int idx, int width, float *color) {
 }
 
 void RayCaster::draw_deep(mjvScene *scn, int ratio, int width, float *color) {
+  if (!enable)
+    return;
   float color_[4] = {1.0, 0.0, 0.0, 1.0};
   if (color != nullptr) {
     color_[0] = color[0];
@@ -461,6 +487,8 @@ void RayCaster::draw_deep(mjvScene *scn, int ratio, int width, float *color) {
 
 void RayCaster::draw_hip_point(mjvScene *scn, int ratio, mjtNum size,
                                float *color) {
+  if (!enable)
+    return;
   if (!is_compute_hit) {
     is_compute_hit = true;
     compute_hit();
@@ -486,6 +514,8 @@ void RayCaster::draw_hip_point(mjvScene *scn, int ratio, mjtNum size,
 }
 
 void RayCaster::draw_normal(mjvScene *scn, int ratio, int width, float *color) {
+  if (!enable)
+    return;
 #if mjVERSION_HEADER > 340
   if (!is_compute_hit) {
     is_compute_hit = true;
