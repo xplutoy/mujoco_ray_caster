@@ -36,6 +36,8 @@ target_link_options(
 
 
 add_custom_command(TARGET sensor_raycaster POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:sensor_raycaster>"
         "${CMAKE_CURRENT_SOURCE_DIR}/lib/"
