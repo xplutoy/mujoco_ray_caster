@@ -7,6 +7,23 @@
 [🤖插件功能演示](https://www.bilibili.com/video/BV1wYnvzgExg/?spm_id_from=333.1387.homepage.video_card.click&vd_source=71e0e4952bb37bdc39eaabd9c08be754)        
 [🎮DEMO测试](#demo)
 
+## Real2Sim 工作流
+
+仓库内新增了真实 RGB-D 相机到 MuJoCo 仿真采集的工作流：
+
+```text
+real2sim/real_stereo_camera2sim/
+```
+
+它会使用 ORB-SLAM3 从真实 RGB-D bag 中恢复相机轨迹，然后把轨迹回放到 MuJoCo，并通过本插件的两个 `ray_caster_camera` 采集仿真深度。
+
+```bash
+cd real2sim/real_stereo_camera2sim
+./build.sh
+```
+
+详细文档见 [`real2sim/real_stereo_camera2sim/README.md`](real2sim/real_stereo_camera2sim/README.md)。
+
 ## sensors
 mujoco.sensor.ray_caster            
 ![](./image/raycaster.png)

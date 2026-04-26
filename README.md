@@ -9,6 +9,23 @@ A raycaster sensor plugin bound to camera, implemented based on mj_ray. The rayc
 [🤖 Plugin Function Demo](https://www.bilibili.com/video/BV1wYnvzgExg/?spm_id_from=333.1387.homepage.video_card.click&vd_source=71e0e4952bb37bdc39eaabd9c08be754)   
 [🎮 DEMO Testing](#demo)    
 
+## Real2Sim Workflow
+
+This repository also contains a real RGB-D camera to MuJoCo collection workflow:
+
+```text
+real2sim/real_stereo_camera2sim/
+```
+
+It uses ORB-SLAM3 to recover a camera trajectory from a real RGB-D bag, replays that trajectory in MuJoCo, and collects simulated RGB plus two `ray_caster_camera` depth streams.
+
+```bash
+cd real2sim/real_stereo_camera2sim
+./build.sh
+```
+
+See [`real2sim/real_stereo_camera2sim/README.md`](real2sim/real_stereo_camera2sim/README.md) for details.
+
 ## sensors
 mujoco.sensor.ray_caster
 ![](./image/raycaster.png)
